@@ -68,6 +68,7 @@ class EnerStdLoss () :
         l2_ener_loss = tf.reduce_mean( tf.square(energy - energy_hat), name='l2_'+suffix)
 
         force_reshape = tf.reshape (force, [-1])
+        print('force.shape= ',tf.shape(force) )
         force_hat_reshape = tf.reshape (force_hat, [-1])
         atom_pref_reshape = tf.reshape (atom_pref, [-1])
         diff_f = force_hat_reshape - force_reshape
