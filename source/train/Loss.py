@@ -158,7 +158,7 @@ class EnerStdLoss () :
                         self.l2_more['l2_pref_force_loss']], 
                        feed_dict=feed_dict_batch)
         print_str = ""
-        prop_fmt = "   %9.2e %9.2e"
+        prop_fmt = "   %20.18e %20.18e"
         print_str += prop_fmt % (np.sqrt(error_test), np.sqrt(error_train))
         if self.has_e :
             print_str += prop_fmt % (np.sqrt(error_e_test) / natoms[0], np.sqrt(error_e_train) / natoms[0])

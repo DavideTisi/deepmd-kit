@@ -24,7 +24,8 @@ class EnerFitting ():
                .add('atom_ener',        list,   default = [])\
                .add("activation_function", str,    default = "tanh")\
                .add("precision",           str, default = "default")\
-               .add("trainable",        [list, bool], default = True)
+               .add("trainable",        [list, bool], default = True)\
+               .add("energy_weigth",        [list, float], default = 1.0)
         class_data = args.parse(jdata)
         self.numb_fparam = class_data['numb_fparam']
         self.numb_aparam = class_data['numb_aparam']
@@ -38,6 +39,10 @@ class EnerFitting ():
         if type(self.trainable) is bool:
             self.trainable = [self.trainable] * (len(self.n_neuron)+1)
         assert(len(self.trainable) == len(self.n_neuron) + 1), 'length of trainable should be that of n_neuron + 1'
+        self.energy_weigth = class_data['energy_weigth']
+        if type(self.energy_weigth) is float:
+            self.energy_weigth = [energy_weigth] * self.ntypes
+        assert(len(self.energy_weigth) == self.ntypes), 'length of self.energy_weigth ({}) should be self.ntypes({})'.format(len(self.energy_weigth),self.ntypes)
         self.atom_ener = []
         for at, ae in enumerate(class_data['atom_ener']):
             if ae is not None:
@@ -233,6 +238,7 @@ class EnerFitting ():
                 final_layer += self.atom_ener[type_i] - zero_layer
 
             final_layer = tf.reshape(final_layer, [tf.shape(inputs)[0], natoms[2+type_i]])
+            final_layer = tf.multiply(final_layer,self.energy_weigth[type_i])
 
             # concat the results
             if type_i == 0:
