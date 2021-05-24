@@ -207,6 +207,7 @@ PairNNP::PairNNP(LAMMPS *lmp)
     error->all(FLERR,"Pair deepmd requires metal unit, please set it by \"units metal\"");
   }
   restartinfo = 1;
+  centroidstressflag = 2 ;
   pppmflag = 1;
   respa_enable = 0;
   writedata = 0;
@@ -333,7 +334,7 @@ void PairNNP::compute(int eflag, int vflag)
   if (do_ghost) {
     LammpsNeighborList lmp_list (list->inum, list->ilist, list->numneigh, list->firstneigh);
     if (single_model || multi_models_no_mod_devi) {
-      if ( ! (eflag_atom || vflag_atom) ) {      
+      if ( ! (eflag_atom || cvflag_atom) ) {      
 #ifdef HIGH_PREC
 	nnp_inter.compute (dener, dforce, dvirial, dcoord, dtype, dbox, nghost, lmp_list, ago, fparam, daparam);
 #else
@@ -367,6 +368,7 @@ void PairNNP::compute(int eflag, int vflag)
 	vector<float> dvatom_(dforce.size(), 0);
 	double dener_ = 0;
 	nnp_inter.compute (dener_, dforce_, dvirial_, deatom_, dvatom_, dcoord_, dtype, dbox_, nghost, lmp_list, ago, fparam, daparam);
+
 	for (unsigned dd = 0; dd < dforce.size(); ++dd) dforce[dd] = dforce_[dd];	
 	for (unsigned dd = 0; dd < dvirial.size(); ++dd) dvirial[dd] = dvirial_[dd];	
 	for (unsigned dd = 0; dd < deatom.size(); ++dd) deatom[dd] = deatom_[dd];	
@@ -376,14 +378,32 @@ void PairNNP::compute(int eflag, int vflag)
 	if (eflag_atom) {
 	  for (int ii = 0; ii < nlocal; ++ii) eatom[ii] += deatom[ii];
 	}
-	if (vflag_atom) {
+	if (cvflag_atom) {
 	  for (int ii = 0; ii < nall; ++ii){
-	    vatom[ii][0] += 1.0 * dvatom[9*ii+0];
-	    vatom[ii][1] += 1.0 * dvatom[9*ii+4];
-	    vatom[ii][2] += 1.0 * dvatom[9*ii+8];
-	    vatom[ii][3] += 1.0 * dvatom[9*ii+3];
-	    vatom[ii][4] += 1.0 * dvatom[9*ii+6];
-	    vatom[ii][5] += 1.0 * dvatom[9*ii+7];
+	    //vatom[ii][0] += 1.0 * dvatom[9*ii+0];
+	    //vatom[ii][1] += 1.0 * dvatom[9*ii+4];
+	    //vatom[ii][2] += 1.0 * dvatom[9*ii+8];
+	    //vatom[ii][3] += 1.0 * dvatom[9*ii+3];
+	    //vatom[ii][4] += 1.0 * dvatom[9*ii+6];
+	    //vatom[ii][5] += 1.0 * dvatom[9*ii+7];
+            cvatom[ii][0] += -1.0 * dvatom[9*ii+0]; // xx
+            cvatom[ii][1] += -1.0 * dvatom[9*ii+4]; // yy 
+            cvatom[ii][2] += -1.0 * dvatom[9*ii+8]; // zz
+            cvatom[ii][3] += -1.0 * dvatom[9*ii+3]; // xy
+            cvatom[ii][4] += -1.0 * dvatom[9*ii+6]; // xz
+            cvatom[ii][5] += -1.0 * dvatom[9*ii+7]; // yz
+            cvatom[ii][6] += -1.0 * dvatom[9*ii+1]; // yx
+            cvatom[ii][7] += -1.0 * dvatom[9*ii+2]; // zx
+            cvatom[ii][8] += -1.0 * dvatom[9*ii+5]; // zy
+            //cvatom[ii][0] += 1.0 * dvatom[9*ii+0]; // xx
+            //cvatom[ii][1] += 1.0 * dvatom[9*ii+4]; // yy 
+            //cvatom[ii][2] += 1.0 * dvatom[9*ii+8]; // zz
+            //cvatom[ii][3] += 1.0 * dvatom[9*ii+1]; // xy +3]; // xy
+            //cvatom[ii][4] += 1.0 * dvatom[9*ii+2]; // xz 6]; // xz
+            //cvatom[ii][5] += 1.0 * dvatom[9*ii+5]; // yz 7]; // yz
+            //cvatom[ii][6] += 1.0 * dvatom[9*ii+3]; // yx 1]; // yx
+            //cvatom[ii][7] += 1.0 * dvatom[9*ii+6]; // zx 2]; // zx
+            //cvatom[ii][8] += 1.0 * dvatom[9*ii+7]; // zy 5]; // zy
 	  }
 	}
       }
@@ -449,14 +469,32 @@ void PairNNP::compute(int eflag, int vflag)
       if (eflag_atom) {
 	for (int ii = 0; ii < nlocal; ++ii) eatom[ii] += deatom[ii];
       }
-      if (vflag_atom) {
+      if (cvflag_atom) {
 	for (int ii = 0; ii < nall; ++ii){
-	  vatom[ii][0] += 1.0 * dvatom[9*ii+0];
-	  vatom[ii][1] += 1.0 * dvatom[9*ii+4];
-	  vatom[ii][2] += 1.0 * dvatom[9*ii+8];
-	  vatom[ii][3] += 1.0 * dvatom[9*ii+3];
-	  vatom[ii][4] += 1.0 * dvatom[9*ii+6];
-	  vatom[ii][5] += 1.0 * dvatom[9*ii+7];
+	 // vatom[ii][0] += 1.0 * dvatom[9*ii+0];
+	 // vatom[ii][1] += 1.0 * dvatom[9*ii+4];
+	 // vatom[ii][2] += 1.0 * dvatom[9*ii+8];
+	 // vatom[ii][3] += 1.0 * dvatom[9*ii+3];
+	 // vatom[ii][4] += 1.0 * dvatom[9*ii+6];
+	 // vatom[ii][5] += 1.0 * dvatom[9*ii+7];
+            cvatom[ii][0] += -1.0 * dvatom[9*ii+0]; // xx
+            cvatom[ii][1] += -1.0 * dvatom[9*ii+4]; // yy 
+            cvatom[ii][2] += -1.0 * dvatom[9*ii+8]; // zz
+            cvatom[ii][3] += -1.0 * dvatom[9*ii+3]; // xy
+            cvatom[ii][4] += -1.0 * dvatom[9*ii+6]; // xz
+            cvatom[ii][5] += -1.0 * dvatom[9*ii+7]; // yz
+            cvatom[ii][6] += -1.0 * dvatom[9*ii+1]; // yx
+            cvatom[ii][7] += -1.0 * dvatom[9*ii+2]; // zx
+            cvatom[ii][8] += -1.0 * dvatom[9*ii+5]; // zy
+            //cvatom[ii][0] += 1.0 * dvatom[9*ii+0]; // xx
+            //cvatom[ii][1] += 1.0 * dvatom[9*ii+4]; // yy 
+            //cvatom[ii][2] += 1.0 * dvatom[9*ii+8]; // zz
+            //cvatom[ii][3] += 1.0 * dvatom[9*ii+1]; // xy +3]; // xy
+            //cvatom[ii][4] += 1.0 * dvatom[9*ii+2]; // xz 6]; // xz
+            //cvatom[ii][5] += 1.0 * dvatom[9*ii+5]; // yz 7]; // yz
+            //cvatom[ii][6] += 1.0 * dvatom[9*ii+3]; // yx 1]; // yx
+            //cvatom[ii][7] += 1.0 * dvatom[9*ii+6]; // zx 2]; // zx
+            //cvatom[ii][8] += 1.0 * dvatom[9*ii+7]; // zy 5]; // zy
 	}
       }      
       if (out_freq > 0 && update->ntimestep % out_freq == 0) {
