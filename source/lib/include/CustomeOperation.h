@@ -47,6 +47,31 @@ inline void spline5_switch (
     }
 }
 
+template <typename TYPE>
+inline void
+spline7_switch (TYPE & vv,
+		TYPE & dd,
+		const TYPE & xx, 
+		const TYPE & rmin, 
+		const TYPE & rmax) 
+{
+  if (xx < rmin) {
+    dd = 0;
+    vv = 1;
+  }
+  else if (xx < rmax) {
+    double uu = (xx - rmin) / (rmax - rmin) ;
+    double du = 1. / (rmax - rmin) ;
+    double uumin1 = uu - 1 ;
+    vv = uumin1*uumin1*uumin1*uumin1 * (1 + 2 * uu * (2 + 5 * uu * (1 + 2 * uu))) ;
+    dd = 140 * uumin1*uumin1*uumin1*uu*uu*uu * du ;
+  }
+  else {
+    dd = 0;
+    vv = 0;
+  }
+}
+
 template<typename FPTYPE> 
 int format_nlist_fill_se_a_cpu (
     vector<int > &		    fmt_nei_idx_a,
@@ -135,7 +160,7 @@ void compute_descriptor_se_a_cpu (
             FPTYPE inr4 = inr2 * inr2;
             FPTYPE inr3 = inr4 * nr;
             FPTYPE sw, dsw;
-            spline5_switch(sw, dsw, nr, rmin, rmax);
+            spline7_switch(sw, dsw, nr, rmin, rmax);
             int idx_deriv = nei_iter * 4 * 3;	// 4 components time 3 directions
             int idx_value = nei_iter * 4;	// 4 components
             // 4 value components
@@ -416,7 +441,7 @@ void compute_descriptor_se_r_cpu (
             FPTYPE inr4 = inr2 * inr2;
             FPTYPE inr3 = inr4 * nr;
             FPTYPE sw, dsw;
-            spline5_switch(sw, dsw, nr, rmin, rmax);
+            spline7_switch(sw, dsw, nr, rmin, rmax);
             int idx_deriv = nei_iter * 3;	// 1 components time 3 directions
             int idx_value = nei_iter;	    // 1 components
             // 4 value components
