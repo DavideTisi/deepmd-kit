@@ -83,6 +83,22 @@ void compute_descriptor_se_a (vector<double > &			descrpt_a,
 			       const double &				rmax);
 
 inline
+void compute_descriptor_se_a (vector<double > &			descrpt_a,
+			       vector<double > &			descrpt_a_deriv,
+             vector<double > &			descrpt_a_laplacian,
+			       vector<double > &			rij_a,
+			       const vector<double > &			posi,
+			       const int &				ntypes,
+			       const vector<int > &			type,
+			       const SimulationRegion<double> &		region,
+			       const bool &				b_pbc,
+			       const int &				i_idx,
+			       const vector<int > &			fmt_nlist_a,
+			       const vector<int > &			sec_a, 
+			       const double &				rmin,
+			       const double &				rmax);
+
+inline
 void compute_descriptor_se_r (vector<double > &			descrpt_r,
 			      vector<double > &			descrpt_r_deriv,
 			      vector<double > &			rij_r,
@@ -929,6 +945,35 @@ spline5_switch (TYPE & vv,
   }
 }
 
+template <typename TYPE>
+inline void
+spline5_switch (TYPE & vv,
+		TYPE & dd,
+    TYPE & ll, // second derivative
+		const TYPE & xx, 
+		const TYPE & rmin, 
+		const TYPE & rmax) 
+{
+  if (xx < rmin) {
+    dd = 0;
+    vv = 1;
+    ll = 0;
+  }
+  else if (xx < rmax) {
+    double uu = (xx - rmin) / (rmax - rmin) ;
+    double du = 1. / (rmax - rmin) ;
+    double uu2 = uu * uu ; 
+    vv = uu*uu*uu * (-6 * uu2 + 15 * uu - 10) + 1;
+    dd = ( 3 * uu2 * (-6 * uu2 + 15 * uu - 10) + uu*uu*uu * (-12 * uu + 15) ) * du;
+    ll = 60 * uu * (-2 * uu2 + 3 * uu - 1 ) * du * du;
+  }
+  else {
+    dd = 0;
+    vv = 0;
+    ll = 0;
+  }
+}
+
 // output deriv size: n_sel_a_nei x 4 x 12				    
 //		      (1./rr, cos_theta, cos_phi, sin_phi)  x 4 x (x, y, z) 
 void compute_descriptor_se_a (vector<double > &			descrpt_a,
@@ -1017,6 +1062,128 @@ void compute_descriptor_se_a (vector<double > &			descrpt_a,
   }
 }
 
+// output deriv size: n_sel_a_nei x 4 x 12				    
+//		      (1./rr, cos_theta, cos_phi, sin_phi)  x 4 x (x, y, z) 
+void compute_descriptor_se_a (vector<double > &			descrpt_a,
+			       vector<double > &			descrpt_a_deriv,
+             vector<double > &			descrpt_a_laplacian,
+			       vector<double > &			rij_a,
+			       const vector<double > &			posi,
+			       const int &				ntypes,
+			       const vector<int > &			type,
+			       const SimulationRegion<double> &		region,
+			       const bool &				b_pbc,
+			       const int &				i_idx,
+			       const vector<int > &			fmt_nlist_a,
+			       const vector<int > &			sec_a, 
+			       const double &				rmin, 
+			       const double &				rmax)
+{  
+  // compute the diff of the neighbors
+  vector<vector<double > > sel_a_diff (sec_a.back());
+  rij_a.resize (sec_a.back() * 3);
+  fill (rij_a.begin(), rij_a.end(), 0.0);
+  for (int ii = 0; ii < int(sec_a.size()) - 1; ++ii){
+    for (int jj = sec_a[ii]; jj < sec_a[ii+1]; ++jj){
+      if (fmt_nlist_a[jj] < 0) break;
+      sel_a_diff[jj].resize(3);
+      const int & j_idx = fmt_nlist_a[jj];
+      if (b_pbc){
+	region.diffNearestNeighbor (posi[j_idx*3+0], posi[j_idx*3+1], posi[j_idx*3+2], 
+				    posi[i_idx*3+0], posi[i_idx*3+1], posi[i_idx*3+2], 
+				    sel_a_diff[jj][0], sel_a_diff[jj][1], sel_a_diff[jj][2]);
+      }
+      else {
+	for (int dd = 0; dd < 3; ++dd) sel_a_diff[jj][dd] = posi[j_idx*3+dd] - posi[i_idx*3+dd];
+      }
+      for (int dd = 0; dd < 3; ++dd) rij_a[jj*3+dd] = sel_a_diff[jj][dd];
+    }
+  }
+  
+  // 1./rr, cos(theta), cos(phi), sin(phi)
+  descrpt_a.resize (sec_a.back() * 4);
+  fill (descrpt_a.begin(), descrpt_a.end(), 0.0);
+  // deriv wrt center: 3
+  descrpt_a_deriv.resize (sec_a.back() * 4 * 3);
+  fill (descrpt_a_deriv.begin(), descrpt_a_deriv.end(), 0.0);
+  // deriv wrt center: 3
+  descrpt_a_laplacian.resize (sec_a.back() * 4 * 3 * 3);
+  fill (descrpt_a_laplacian.begin(), descrpt_a_laplacian.end(), 0.0);
+
+  for (int sec_iter = 0; sec_iter < int(sec_a.size()) - 1; ++sec_iter){
+    for (int nei_iter = sec_a[sec_iter]; nei_iter < sec_a[sec_iter+1]; ++nei_iter) {      
+      if (fmt_nlist_a[nei_iter] < 0) break;
+      const double * rr = &sel_a_diff[nei_iter][0];
+      double nr2 = MathUtilities::dot(rr, rr);
+      double inr = 1./sqrt(nr2);
+      double nr = nr2 * inr;
+      double inr2 = inr * inr;
+      double inr4 = inr2 * inr2;
+      double inr3 = inr4 * nr;
+      double sw, dsw,d2sw;
+      spline5_switch(sw, dsw, d2sw, nr, rmin, rmax);
+      int idx_deriv = nei_iter * 4 * 3;	// 4 components time 3 directions
+      int idx_laplacian = nei_iter * 4 * 3 * 3;	// 4 components time 3 directions times 3 directions
+      int idx_value = nei_iter * 4;	// 4 components
+      // 4 value components
+      descrpt_a[idx_value + 0] = 1./nr;
+      descrpt_a[idx_value + 1] = rr[0] / nr2;
+      descrpt_a[idx_value + 2] = rr[1] / nr2;
+      descrpt_a[idx_value + 3] = rr[2] / nr2;
+      // deriv of component 1/r
+      descrpt_a_deriv[idx_deriv + 0] = rr[0] * inr3 * sw - descrpt_a[idx_value + 0] * dsw * rr[0] * inr;
+      descrpt_a_deriv[idx_deriv + 1] = rr[1] * inr3 * sw - descrpt_a[idx_value + 0] * dsw * rr[1] * inr;
+      descrpt_a_deriv[idx_deriv + 2] = rr[2] * inr3 * sw - descrpt_a[idx_value + 0] * dsw * rr[2] * inr;
+      // deriv of component x/r2
+      descrpt_a_deriv[idx_deriv + 3] = (2. * rr[0] * rr[0] * inr4 - inr2) * sw - descrpt_a[idx_value + 1] * dsw * rr[0] * inr;
+      descrpt_a_deriv[idx_deriv + 4] = (2. * rr[0] * rr[1] * inr4	) * sw - descrpt_a[idx_value + 1] * dsw * rr[1] * inr;
+      descrpt_a_deriv[idx_deriv + 5] = (2. * rr[0] * rr[2] * inr4	) * sw - descrpt_a[idx_value + 1] * dsw * rr[2] * inr;
+      // deriv of component y/r2
+      descrpt_a_deriv[idx_deriv + 6] = (2. * rr[1] * rr[0] * inr4	) * sw - descrpt_a[idx_value + 2] * dsw * rr[0] * inr;
+      descrpt_a_deriv[idx_deriv + 7] = (2. * rr[1] * rr[1] * inr4 - inr2) * sw - descrpt_a[idx_value + 2] * dsw * rr[1] * inr;
+      descrpt_a_deriv[idx_deriv + 8] = (2. * rr[1] * rr[2] * inr4	) * sw - descrpt_a[idx_value + 2] * dsw * rr[2] * inr;
+      // deriv of component z/r2
+      descrpt_a_deriv[idx_deriv + 9] = (2. * rr[2] * rr[0] * inr4	) * sw - descrpt_a[idx_value + 3] * dsw * rr[0] * inr;
+      descrpt_a_deriv[idx_deriv +10] = (2. * rr[2] * rr[1] * inr4	) * sw - descrpt_a[idx_value + 3] * dsw * rr[1] * inr;
+      descrpt_a_deriv[idx_deriv +11] = (2. * rr[2] * rr[2] * inr4 - inr2) * sw - descrpt_a[idx_value + 3] * dsw * rr[2] * inr;
+      // laplacian of component 1/r component 
+      double 1_r_diag = inr3 * sw -  dsw * inr2  ; 
+      for (int ii = 0; ii < 3; ++ii){
+        descrpt_a_laplacian[idx_laplacian + ii*3 + 0] = - 2 * descrpt_a_deriv[idx_deriv + ii] *  descrpt_a[idx_value + 0] - rr[ii] * rr[0] * inr3 * ( d2sw + sw * inr2 - inr * dsw );
+        descrpt_a_laplacian[idx_laplacian + ii*3 + 1] = - 2 * descrpt_a_deriv[idx_deriv + ii] *  descrpt_a[idx_value + 1] - rr[ii] * rr[1] * inr3 * ( d2sw + sw * inr2 - inr * dsw );
+        descrpt_a_laplacian[idx_laplacian + ii*3 + 2] = - 2 * descrpt_a_deriv[idx_deriv + ii] *  descrpt_a[idx_value + 2] - rr[ii] * rr[2] * inr3 * ( d2sw + sw * inr2 - inr * dsw );
+        descrpt_a_laplacian[idx_laplacian + ii*3 + ii] += 1_r_diag ;
+      }
+    
+      // laplacian of component x/r2 y/r2 z/r2
+      // kk component of the R matrix
+      // ii component of 1 derivative
+      // jj component of 2 derivative
+
+      double dsw_2sw_r = - dsw + 2 * sw *inr ;
+      double d2sw_5dsw_8sw_r = d2sw - 5*dsw * inr + 8 * sw *inr2 ;
+      double rrii = 0 ;
+      double rrkkii=0 ; 
+      for (int kk = 0; kk < 3; ++kk){
+        for (int ii = 0; ii < 3; ++ii){
+          rrkkii = rr[kk] + rr[ii]; 
+          for (int jj =0 ; jj <3 ;++jj){
+            rrii = 0 ;
+            if ( ii==kk)  rrii +=  rr[jj];
+            if ( ii==jj)  rrii += rr[kk];
+            if ( jj==kk)  rrii +=  rr[ii];
+            descrpt_a_laplacian[idx_laplacian + 9 + ii*3 + jj ] = dsw_2sw_r * inr3 *  rrii   - d2sw_5dsw_8sw_r * inr4 * (rrkkii + rr[jj]) ; 
+          }
+        }
+      }
+      // 4 value components
+      descrpt_a[idx_value + 0] *= sw;
+      descrpt_a[idx_value + 1] *= sw;
+      descrpt_a[idx_value + 2] *= sw;
+      descrpt_a[idx_value + 3] *= sw;
+    }
+  }
+}
 
 void compute_descriptor_se_r (vector<double > &			descrpt,
 			      vector<double > &			descrpt_deriv,
