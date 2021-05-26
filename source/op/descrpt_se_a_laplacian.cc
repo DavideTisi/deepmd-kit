@@ -31,6 +31,7 @@ REGISTER_OP("DescrptSeA")
     .Attr("sel_r: list(int)")   //all zero
     .Output("descrpt: T")
     .Output("descrpt_deriv: T")
+    .Output("descrpt_laplacian: T")
     .Output("rij: T")
     .Output("nlist: int32");
 
@@ -134,6 +135,9 @@ public:
     TensorShape descrpt_deriv_shape ;
     descrpt_deriv_shape.AddDim (nsamples);
     descrpt_deriv_shape.AddDim (nloc * ndescrpt * 3);
+    TensorShape descrpt_laplacian_shape ;
+    descrpt_laplacian_shape.AddDim (nsamples);
+    descrpt_laplacian_shape.AddDim (nloc * ndescrpt * 3 * 3);
     TensorShape rij_shape ;
     rij_shape.AddDim (nsamples);
     rij_shape.AddDim (nloc * nnei * 3);
@@ -150,6 +154,10 @@ public:
     OP_REQUIRES_OK(context, context->allocate_output(context_output_index++, 
 						     descrpt_deriv_shape, 
 						     &descrpt_deriv_tensor));
+    Tensor* descrpt_laplacian_tensor = NULL;
+    OP_REQUIRES_OK(context, context->allocate_output(context_output_index++, 
+						     descrpt_laplacian_shape, 
+						     &descrpt_laplacian_tensor));
     Tensor* rij_tensor = NULL;
     OP_REQUIRES_OK(context, context->allocate_output(context_output_index++, 
 						     rij_shape,
@@ -167,6 +175,7 @@ public:
     auto std	= std_tensor	.matrix<FPTYPE>();
     auto descrpt	= descrpt_tensor	->matrix<FPTYPE>();
     auto descrpt_deriv	= descrpt_deriv_tensor	->matrix<FPTYPE>();
+    auto descrpt_laplacian	= descrpt_deriv_laplacian	->matrix<FPTYPE>();
     auto rij		= rij_tensor		->matrix<FPTYPE>();
     auto nlist		= nlist_tensor		->matrix<int>();
 
@@ -282,12 +291,14 @@ public:
 
 	vector<compute_t > d_descrpt_a;
 	vector<compute_t > d_descrpt_a_deriv;
+  vector<compute_t > d_descrpt_a_laplacian;
 	vector<compute_t > d_descrpt_r;
 	vector<compute_t > d_descrpt_r_deriv;
 	vector<compute_t > d_rij_a;
 	vector<compute_t > d_rij_r;      
 	compute_descriptor_se_a (d_descrpt_a,
 				 d_descrpt_a_deriv,
+         d_descrpt_a_laplacian,
 				 d_rij_a,
 				 d_coord3,
 				 ntypes, 
@@ -303,6 +314,7 @@ public:
 	// check sizes
 	assert (d_descrpt_a.size() == ndescrpt_a);
 	assert (d_descrpt_a_deriv.size() == ndescrpt_a * 3);
+  assert (d_descrpt_a_laplacian.size() == ndescrpt_a * 3 *3);
 	assert (d_rij_a.size() == nnei_a * 3);
 	assert (int(fmt_nlist_a.size()) == nnei_a);
 	// record outputs
@@ -311,6 +323,9 @@ public:
 	}
 	for (int jj = 0; jj < ndescrpt_a * 3; ++jj) {
 	  descrpt_deriv(kk, ii * ndescrpt * 3 + jj) = d_descrpt_a_deriv[jj] / std(d_type[ii], jj/3);
+	}
+  for (int jj = 0; jj < ndescrpt_a * 3 *3; ++jj) {
+	  descrpt_laplacian(kk, ii * ndescrpt * 3 + jj) = d_descrpt_a_laplacian[jj] / std(d_type[ii], jj/3);
 	}
 	for (int jj = 0; jj < nnei_a * 3; ++jj){
 	  rij (kk, ii * nnei * 3 + jj) = d_rij_a[jj];
