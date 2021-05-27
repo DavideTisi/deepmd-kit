@@ -85,7 +85,7 @@ void compute_descriptor_se_a (vector<double > &			descrpt_a,
 inline
 void compute_descriptor_se_a (vector<double > &			descrpt_a,
 			       vector<double > &			descrpt_a_deriv,
-             vector<double > &			descrpt_a_laplacian,
+             vector<double > &			descrpt_a_Hessian,
 			       vector<double > &			rij_a,
 			       const vector<double > &			posi,
 			       const int &				ntypes,
@@ -1066,7 +1066,7 @@ void compute_descriptor_se_a (vector<double > &			descrpt_a,
 //		      (1./rr, cos_theta, cos_phi, sin_phi)  x 4 x (x, y, z) 
 void compute_descriptor_se_a (vector<double > &			descrpt_a,
 			       vector<double > &			descrpt_a_deriv,
-             vector<double > &			descrpt_a_laplacian,
+             vector<double > &			descrpt_a_Hessian,
 			       vector<double > &			rij_a,
 			       const vector<double > &			posi,
 			       const int &				ntypes,
@@ -1107,8 +1107,8 @@ void compute_descriptor_se_a (vector<double > &			descrpt_a,
   descrpt_a_deriv.resize (sec_a.back() * 4 * 3);
   fill (descrpt_a_deriv.begin(), descrpt_a_deriv.end(), 0.0);
   // deriv wrt center: 3
-  descrpt_a_laplacian.resize (sec_a.back() * 4 * 3 * 3);
-  fill (descrpt_a_laplacian.begin(), descrpt_a_laplacian.end(), 0.0);
+  descrpt_a_Hessian.resize (sec_a.back() * 4 * 3 * 3);
+  fill (descrpt_a_Hessian.begin(), descrpt_a_Hessian.end(), 0.0);
 
   for (int sec_iter = 0; sec_iter < int(sec_a.size()) - 1; ++sec_iter){
     for (int nei_iter = sec_a[sec_iter]; nei_iter < sec_a[sec_iter+1]; ++nei_iter) {      
@@ -1123,7 +1123,7 @@ void compute_descriptor_se_a (vector<double > &			descrpt_a,
       double sw, dsw,d2sw;
       spline5_switch(sw, dsw, d2sw, nr, rmin, rmax);
       int idx_deriv = nei_iter * 4 * 3;	// 4 components time 3 directions
-      int idx_laplacian = nei_iter * 4 * 3 * 3;	// 4 components time 3 directions times 3 directions
+      int idx_Hessian = nei_iter * 4 * 3 * 3;	// 4 components time 3 directions times 3 directions
       int idx_value = nei_iter * 4;	// 4 components
       // 4 value components
       descrpt_a[idx_value + 0] = 1./nr;
@@ -1146,16 +1146,16 @@ void compute_descriptor_se_a (vector<double > &			descrpt_a,
       descrpt_a_deriv[idx_deriv + 9] = (2. * rr[2] * rr[0] * inr4	) * sw - descrpt_a[idx_value + 3] * dsw * rr[0] * inr;
       descrpt_a_deriv[idx_deriv +10] = (2. * rr[2] * rr[1] * inr4	) * sw - descrpt_a[idx_value + 3] * dsw * rr[1] * inr;
       descrpt_a_deriv[idx_deriv +11] = (2. * rr[2] * rr[2] * inr4 - inr2) * sw - descrpt_a[idx_value + 3] * dsw * rr[2] * inr;
-      // laplacian of component 1/r component 
+      // Hessian of component 1/r component 
       double 1_r_diag = inr3 * sw -  dsw * inr2  ; 
       for (int ii = 0; ii < 3; ++ii){
-        descrpt_a_laplacian[idx_laplacian + ii*3 + 0] = - 2 * descrpt_a_deriv[idx_deriv + ii] *  descrpt_a[idx_value + 0] - rr[ii] * rr[0] * inr3 * ( d2sw + sw * inr2 - inr * dsw );
-        descrpt_a_laplacian[idx_laplacian + ii*3 + 1] = - 2 * descrpt_a_deriv[idx_deriv + ii] *  descrpt_a[idx_value + 1] - rr[ii] * rr[1] * inr3 * ( d2sw + sw * inr2 - inr * dsw );
-        descrpt_a_laplacian[idx_laplacian + ii*3 + 2] = - 2 * descrpt_a_deriv[idx_deriv + ii] *  descrpt_a[idx_value + 2] - rr[ii] * rr[2] * inr3 * ( d2sw + sw * inr2 - inr * dsw );
-        descrpt_a_laplacian[idx_laplacian + ii*3 + ii] += 1_r_diag ;
+        descrpt_a_Hessian[idx_Hessian + ii*3 + 0] = - 2 * descrpt_a_deriv[idx_deriv + ii] *  descrpt_a[idx_value + 0] - rr[ii] * rr[0] * inr3 * ( d2sw + sw * inr2 - inr * dsw );
+        descrpt_a_Hessian[idx_Hessian + ii*3 + 1] = - 2 * descrpt_a_deriv[idx_deriv + ii] *  descrpt_a[idx_value + 1] - rr[ii] * rr[1] * inr3 * ( d2sw + sw * inr2 - inr * dsw );
+        descrpt_a_Hessian[idx_Hessian + ii*3 + 2] = - 2 * descrpt_a_deriv[idx_deriv + ii] *  descrpt_a[idx_value + 2] - rr[ii] * rr[2] * inr3 * ( d2sw + sw * inr2 - inr * dsw );
+        descrpt_a_Hessian[idx_Hessian + ii*3 + ii] += 1_r_diag ;
       }
     
-      // laplacian of component x/r2 y/r2 z/r2
+      // Hessian of component x/r2 y/r2 z/r2
       // kk component of the R matrix
       // ii component of 1 derivative
       // jj component of 2 derivative
@@ -1172,7 +1172,7 @@ void compute_descriptor_se_a (vector<double > &			descrpt_a,
             if ( ii==kk)  rrii +=  rr[jj];
             if ( ii==jj)  rrii += rr[kk];
             if ( jj==kk)  rrii +=  rr[ii];
-            descrpt_a_laplacian[idx_laplacian + 9 + ii*3 + jj ] = dsw_2sw_r * inr3 *  rrii   - d2sw_5dsw_8sw_r * inr4 * (rrkkii + rr[jj]) ; 
+            descrpt_a_Hessian[idx_Hessian + 9 + ii*3 + jj ] = dsw_2sw_r * inr3 *  rrii   - d2sw_5dsw_8sw_r * inr4 * (rrkkii + rr[jj]) ; 
           }
         }
       }
