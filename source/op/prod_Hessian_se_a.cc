@@ -6,17 +6,18 @@
 using namespace tensorflow;
 using namespace std;
 
-REGISTER_OP("ProdForceSeA")
+REGISTER_OP("ProdHessianSeA")
 .Attr("T: {float, double}")
 .Input("net_deriv: T")
 .Input("in_deriv: T")
-.Input("net_laplacian: T")
-.Input("in_laplacian: T")
+.Input("net_Hessian: T")
+.Input("in_Hessian: T")
 .Input("nlist: int32")
 .Input("natoms: int32")
 .Attr("n_a_sel: int")
 .Attr("n_r_sel: int")
-.Output("force: T");
+.Output("Hessian: T")
+.Output("atom_Hessian: T");
 
 
 using namespace tensorflow;
@@ -25,9 +26,9 @@ using CPUDevice = Eigen::ThreadPoolDevice;
 using GPUDevice = Eigen::GpuDevice;
 
 template<typename Device, typename FPTYPE>
-class ProdForceSeAOp : public OpKernel {
+class ProdHessianSeAOp : public OpKernel {
  public:
-  explicit ProdForceSeAOp(OpKernelConstruction* context) : OpKernel(context) {
+  explicit ProdHessianSeAOp(OpKernelConstruction* context) : OpKernel(context) {
     OP_REQUIRES_OK(context, context->GetAttr("n_a_sel", &n_a_sel));
     OP_REQUIRES_OK(context, context->GetAttr("n_r_sel", &n_r_sel));
     n_a_shift = n_a_sel * 4;
@@ -38,6 +39,8 @@ class ProdForceSeAOp : public OpKernel {
     int context_input_index = 0;
     const Tensor& net_deriv_tensor	= context->input(context_input_index++);
     const Tensor& in_deriv_tensor	= context->input(context_input_index++);
+    const Tensor& net_hessian_tensor	= context->input(context_input_index++);
+    const Tensor& in_hessian_tensor	= context->input(context_input_index++);
     const Tensor& nlist_tensor		= context->input(context_input_index++);
     const Tensor& natoms_tensor		= context->input(context_input_index++);
 
@@ -54,6 +57,7 @@ class ProdForceSeAOp : public OpKernel {
     int nloc = natoms(0);
     int nall = natoms(1);
     int ndescrpt = net_deriv_tensor.shape().dim_size(1) / nloc;
+    // TODO:shape of hessian
     int nnei = nlist_tensor.shape().dim_size(1) / nloc;
 
     // check the sizes
@@ -65,27 +69,51 @@ class ProdForceSeAOp : public OpKernel {
     OP_REQUIRES (context, (0 == n_r_sel),					errors::InvalidArgument ("Rotational free only support all-angular information"));
 
     // Create an output tensor
-    TensorShape force_shape ;
-    force_shape.AddDim (nframes);
-    force_shape.AddDim (3 * nall);
-    Tensor* force_tensor = NULL;
+    TensorShape hessian_shape ;
+    hessian_shape.AddDim (nframes);
+    hessian_shape.AddDim ( nall*nall*9);
+    Tensor* hessian_tensor = NULL;
     int context_output_index = 0;
     OP_REQUIRES_OK(context, context->allocate_output(context_output_index++,
-						     force_shape, &force_tensor));
+						     hessian_shape, &hessian_tensor));
+    // Create an output tensor
+    TensorShape atom_hessian_shape ;
+    atom_hessian_shape.AddDim (nframes);
+    atom_hessian_shape.AddDim (nall * nall*nall * 9 );
+    Tensor* atom_hessian_tensor = NULL;
+    int context_output_index = 0;
+    OP_REQUIRES_OK(context, context->allocate_output(context_output_index++,
+						     atom_hessian_shape, &atom_hessian_tensor));
+  //  // Create an output tensor
+  //  TensorShape force_shape ;
+  //  force_shape.AddDim (nframes);
+  //  force_shape.AddDim (3 * nall);
+  //  Tensor* force_tensor = NULL;
+  //  int context_output_index = 0;
+  //  OP_REQUIRES_OK(context, context->allocate_output(context_output_index++,
+	//					     force_shape, &force_tensor));
     
     // flat the tensors
     auto net_deriv = net_deriv_tensor.flat<FPTYPE>();
     auto in_deriv = in_deriv_tensor.flat<FPTYPE>();
     auto nlist = nlist_tensor.flat<int>();
-    auto force = force_tensor->flat<FPTYPE>();
+    //auto force = force_tensor->flat<FPTYPE>();
+    auto hessian = hessian_tensor->flat<FPTYPE>();
+    auto atom_hessian = atom_hessian_tensor->flat<FPTYPE>();
 
-    assert (nframes == force_shape.dim_size(0));
+    //assert (nframes == force_shape.dim_size(0));
+    assert (nframes == hessian_shape.dim_size(0));
+    assert (nframes == atom_hessian_shape.dim_size(0));
+    assert (nframes == net_hessian_tensor.shape().dim_size(0));
+    assert (nframes == in_hessian_tensor.shape().dim_size(0));
     assert (nframes == net_deriv_tensor.shape().dim_size(0));
     assert (nframes == in_deriv_tensor.shape().dim_size(0));
     assert (nframes == nlist_tensor.shape().dim_size(0));
-    assert (nall * 3 == force_shape.dim_size(1));
+    //assert (nall * 3 == force_shape.dim_size(1));
     assert (nloc * ndescrpt == net_deriv_tensor.shape().dim_size(1));
     assert (nloc * ndescrpt * 3 == in_deriv_tensor.shape().dim_size(1));
+    assert (nloc * ndescrpt == net_hessian_tensor.shape().dim_size(1)); // only nloc * ndescrpt are not zero only d^2e_k/dR_k^2
+    assert (nloc * nloc * ndescrpt * 9 == in_hessian_tensor.shape().dim_size(1));
     assert (nloc * nnei == nlist_tensor.shape().dim_size(1));
     assert (nnei * 4 == ndescrpt);	    
     
@@ -149,8 +177,8 @@ private:
 // Register the CPU kernels.
 #define REGISTER_CPU(T)                                                                  \
 REGISTER_KERNEL_BUILDER(                                                                 \
-    Name("ProdForceSeA").Device(DEVICE_CPU).TypeConstraint<T>("T"),                      \
-    ProdForceSeAOp<CPUDevice, T>); 
+    Name("ProdHessianSeA").Device(DEVICE_CPU).TypeConstraint<T>("T"),                      \
+    ProdHessianSeAOp<CPUDevice, T>); 
 REGISTER_CPU(float);
 REGISTER_CPU(double);
 
