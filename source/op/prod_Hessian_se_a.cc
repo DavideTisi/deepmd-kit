@@ -120,7 +120,11 @@ class ProdHessianSeAOp : public OpKernel {
     // loop over samples
 #pragma omp parallel for
     for (int kk = 0; kk < nframes; ++kk){
-      int force_iter	= kk * nall * 3;
+      int hessian_iter = kk * nall*nall*9 ;
+      int atomic_hessian_iter = kk * nall * nall*nall*9 ;
+      int net_hessian_iter = kk * nloc * ndescrpt ;
+      int in_hessian_iter = kk * nloc * nloc * ndescrpt * 9 ;
+      //int force_iter	= kk * nall * 3;
       int net_iter	= kk * nloc * ndescrpt;
       int in_iter	= kk * nloc * ndescrpt * 3;
       int nlist_iter	= kk * nloc * nnei;
