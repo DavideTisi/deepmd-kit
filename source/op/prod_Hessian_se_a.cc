@@ -129,6 +129,44 @@ class ProdHessianSeAOp : public OpKernel {
       int in_iter	= kk * nloc * ndescrpt * 3;
       int nlist_iter	= kk * nloc * nnei;
 
+      for (int ii = 0 ; ii < nall*nall*9 ; ++ii){
+        int i_idx = ii ;
+        hessian(hessian_iter + i_idx ) = 0. ;
+        for (int jj = 0 ; jj<nall ; ++jj ){
+          atom_hessian(hessian_iter + i_idx + jj ) = 0. ;
+        }
+      }
+
+      for (int ii = 0 ; ii < nall*nall*9 ; ++ii){
+        int i_idx = ii ;
+        for (int jj = 0; jj < nnei; ++jj){
+          int j_idx = nlist (nlist_iter + i_idx * nnei + jj);
+          if (j_idx < 0) continue;
+          int aa_start_1, aa_end_1;
+          make_descript_range_1 (aa_start_1, aa_end_1, jj);
+          for (int aa_1 = aa_start_1; aa_1 < aa_end_1; ++aa_1) {
+            FPTYPE de_dR1 =  net_deriv (net_iter + i_idx * ndescrpt + aa_1 ) ;
+            int dR_dr_iter =  in_iter * i_idx * ndescrpt + aa_1 ;
+            for (int zz = 0; zz < nnei; ++zz){
+              int z_idx = nlist (nlist_iter + i_idx * nnei + zz);
+              if (j_idx < 0) continue;
+              int aa_start_2, aa_end_2;
+              make_descript_range_2 (aa_start_2, aa_end_2, zz );
+              for (int aa_2 = aa_start_2 ; aa_2 < aa_end_2 ; ++aa_2 ) {
+                FPTYPE de_dR2 =  net_deriv (net_iter + i_idx * ndescrpt + aa_2 ) ;
+                int dR_dr_iter2 =  in_iter * i_idx * ndescrpt + aa_2 ;
+                for (int dd0 = 0; dd0 < 3; ++dd0){
+                  for (int dd1 = 0; dd1 < 3; ++dd1){
+                    atom_hessian(hessian_iter + i_idx + jj ) += in_deriv (in_iter + i_idx * ndescrpt * 3 + aa_1 * 3 + dd0) * in_deriv (in_iter + i_idx * ndescrpt * 3 + aa_2 * 3 + dd1)
+                  }
+                }
+              }
+            }
+            
+          }
+        }
+      }
+	  }
       for (int ii = 0; ii < nall; ++ii){
 	int i_idx = ii;
 	force (force_iter + i_idx * 3 + 0) = 0;
