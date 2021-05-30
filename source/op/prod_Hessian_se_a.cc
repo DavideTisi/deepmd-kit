@@ -162,17 +162,10 @@ class ProdHessianSeAOp : public OpKernel {
                 }
               }
             }
-            
           }
         }
       }
-	  }
-      for (int ii = 0; ii < nall; ++ii){
-	int i_idx = ii;
-	force (force_iter + i_idx * 3 + 0) = 0;
-	force (force_iter + i_idx * 3 + 1) = 0;
-	force (force_iter + i_idx * 3 + 2) = 0;
-      }
+
 
       // compute force of a frame
       for (int ii = 0; ii < nloc; ++ii){
