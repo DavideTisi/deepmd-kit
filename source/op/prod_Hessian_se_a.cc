@@ -98,6 +98,8 @@ class ProdHessianSeAOp : public OpKernel {
     auto in_deriv = in_deriv_tensor.flat<FPTYPE>();
     auto nlist = nlist_tensor.flat<int>();
     //auto force = force_tensor->flat<FPTYPE>();
+    auto in_hessian = in_hessian_tensor.flat<FPTYPE>();
+    auto net_hessian = net_hessian_tensor.flat<FPTYPE>();
     auto hessian = hessian_tensor->flat<FPTYPE>();
     auto atom_hessian = atom_hessian_tensor->flat<FPTYPE>();
 
@@ -112,7 +114,7 @@ class ProdHessianSeAOp : public OpKernel {
     //assert (nall * 3 == force_shape.dim_size(1));
     assert (nloc * ndescrpt == net_deriv_tensor.shape().dim_size(1));
     assert (nloc * ndescrpt * 3 == in_deriv_tensor.shape().dim_size(1));
-    assert (nloc * ndescrpt == net_hessian_tensor.shape().dim_size(1)); // only nloc * ndescrpt are not zero only d^2e_k/dR_k^2
+    assert (nloc * ndescrpt * ndescrpt == net_hessian_tensor.shape().dim_size(1)); // only nloc * ndescrpt are not zero only d^2e_k/dR_k^2
     assert (nloc * nloc * ndescrpt * 9 == in_hessian_tensor.shape().dim_size(1));
     assert (nloc * nnei == nlist_tensor.shape().dim_size(1));
     assert (nnei * 4 == ndescrpt);	    
@@ -157,7 +159,10 @@ class ProdHessianSeAOp : public OpKernel {
                 int dR_dr_iter2 =  in_iter * i_idx * ndescrpt + aa_2 ;
                 for (int dd0 = 0; dd0 < 3; ++dd0){
                   for (int dd1 = 0; dd1 < 3; ++dd1){
-                    atom_hessian(hessian_iter + i_idx + jj ) += in_deriv (in_iter + i_idx * ndescrpt * 3 + aa_1 * 3 + dd0) * in_deriv (in_iter + i_idx * ndescrpt * 3 + aa_2 * 3 + dd1)
+                    // compute d^2e_k/(dR_k)^2 * dR_k/dr_n dR_k/dr_m
+                    atom_hessian(hessian_iter + i_idx + jj ) += net_hessian(net_hessian_iter+ i_idx * ndescrpt * ndescrpt + aa_1 * ndescrpt +aa_2  )*in_deriv (in_iter + i_idx * ndescrpt * 3 + aa_1 * 3 + dd0) * in_deriv (in_iter + i_idx * ndescrpt * 3 + aa_2 * 3 + dd1);
+                    // compute de_k/dR_k * d^2R_k/(dr_n dr_m) 
+                    atom_hessian(hessian_iter + i_idx + jj ) += net_deriv (net_iter + i_idx * ndescrpt + aa_1) *  in_hessian (in_hessian_iter + i_idx * nloc * ndescrpt+j_idx * ndescrpt + aa_1 ) ; 
                   }
                 }
               }
