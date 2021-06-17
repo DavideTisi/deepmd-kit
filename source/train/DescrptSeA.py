@@ -236,6 +236,9 @@ class DescrptSeA ():
         [net_deriv] = tf.gradients (atom_ener, self.descrpt_reshape)
         [net_hessian] = tf.hessians (atom_ener, self.descrpt_reshape)
         print('net_hessian',net_hessian)
+        print('self.ndescrpt',self.ndescrpt)
+        print('natoms',natoms)
+        print('tf.hessians (atom_ener, self.descrpt_reshape)',tf.hessians (atom_ener, self.descrpt_reshape))
         net_deriv_reshape = tf.reshape (net_deriv, [-1, natoms[0] * self.ndescrpt])        
         force \
             = op_module.prod_force_se_a (net_deriv_reshape,
