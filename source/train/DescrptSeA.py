@@ -154,6 +154,7 @@ class DescrptSeA ():
                mesh,
                suffix = '', 
                reuse = None):
+#               ifHessian = False ):
         davg = self.davg
         dstd = self.dstd
         with tf.variable_scope('descrpt_attr' + suffix, reuse = reuse) :
@@ -187,7 +188,21 @@ class DescrptSeA ():
         coord = tf.reshape (coord_, [-1, natoms[1] * 3])
         box   = tf.reshape (box_, [-1, 9])
         atype = tf.reshape (atype_, [-1, natoms[1]])
-
+        #if (ifHessian):
+        #    self.descrpt, self.descrpt_deriv, self.descrpt_Hessian ,self.rij, self.nlist \
+        #        = op_module.descrpt_se_a (coord,
+        #                                atype,
+        #                                natoms,
+        #                                box,
+        #                                mesh,
+        #                                self.t_avg,
+        #                                self.t_std,
+        #                                rcut_a = self.rcut_a,
+        #                                rcut_r = self.rcut_r,
+        #                                rcut_r_smth = self.rcut_r_smth,
+        #                                sel_a = self.sel_a,
+        #                                sel_r = self.sel_r)
+        #else:
         self.descrpt, self.descrpt_deriv, self.rij, self.nlist \
             = op_module.descrpt_se_a (coord,
                                        atype,
@@ -217,8 +232,10 @@ class DescrptSeA ():
         return self.qmat
 
 
-    def prod_force_virial(self, atom_ener, natoms) :
+    def prod_force_virial(self, atom_ener, natoms,ifHessian=False) :
         [net_deriv] = tf.gradients (atom_ener, self.descrpt_reshape)
+        [net_hessian] = tf.hessian (atom_ener, self.descrpt_reshape)
+        print('net_hessian',net_hessian)
         net_deriv_reshape = tf.reshape (net_deriv, [-1, natoms[0] * self.ndescrpt])        
         force \
             = op_module.prod_force_se_a (net_deriv_reshape,
@@ -235,6 +252,18 @@ class DescrptSeA ():
                                            natoms,
                                            n_a_sel = self.nnei_a,
                                            n_r_sel = self.nnei_r)
+        if (ifHessian):
+            hessian, atom_hessian \
+                = op_module.prod_hessian_se_a (net_deriv_reshape,
+                                           self.descrpt_deriv,
+                                           self.net_Hessian,
+                                           self.in_Hessian,
+                                           self.rij,
+                                           self.nlist,
+                                           natoms,
+                                           n_a_sel = self.nnei_a,
+                                           n_r_sel = self.nnei_r)
+
         return force, virial, atom_virial
         
 

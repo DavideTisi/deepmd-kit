@@ -172,29 +172,6 @@ class ProdHessianSeAOp : public OpKernel {
       }
 
 
-      // compute force of a frame
-      for (int ii = 0; ii < nloc; ++ii){
-	int i_idx = ii;	
-	// deriv wrt center atom
-	for (int aa = 0; aa < ndescrpt; ++aa){
-	  force (force_iter + i_idx * 3 + 0) -= net_deriv (net_iter + i_idx * ndescrpt + aa) * in_deriv (in_iter + i_idx * ndescrpt * 3 + aa * 3 + 0);
-	  force (force_iter + i_idx * 3 + 1) -= net_deriv (net_iter + i_idx * ndescrpt + aa) * in_deriv (in_iter + i_idx * ndescrpt * 3 + aa * 3 + 1);
-	  force (force_iter + i_idx * 3 + 2) -= net_deriv (net_iter + i_idx * ndescrpt + aa) * in_deriv (in_iter + i_idx * ndescrpt * 3 + aa * 3 + 2);
-	}
-	// deriv wrt neighbors
-	for (int jj = 0; jj < nnei; ++jj){
-	  int j_idx = nlist (nlist_iter + i_idx * nnei + jj);
-	  // if (j_idx > nloc) j_idx = j_idx % nloc;
-	  if (j_idx < 0) continue;
-	  int aa_start, aa_end;
-	  make_descript_range (aa_start, aa_end, jj);
-	  for (int aa = aa_start; aa < aa_end; ++aa) {
-	    force (force_iter + j_idx * 3 + 0) += net_deriv (net_iter + i_idx * ndescrpt + aa) * in_deriv (in_iter + i_idx * ndescrpt * 3 + aa * 3 + 0);
-	    force (force_iter + j_idx * 3 + 1) += net_deriv (net_iter + i_idx * ndescrpt + aa) * in_deriv (in_iter + i_idx * ndescrpt * 3 + aa * 3 + 1);
-	    force (force_iter + j_idx * 3 + 2) += net_deriv (net_iter + i_idx * ndescrpt + aa) * in_deriv (in_iter + i_idx * ndescrpt * 3 + aa * 3 + 2);
-	  }
-	}
-      }
     }
   }
 private:
