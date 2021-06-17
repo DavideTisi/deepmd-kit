@@ -234,7 +234,7 @@ class DescrptSeA ():
 
     def prod_force_virial(self, atom_ener, natoms,ifHessian=False) :
         [net_deriv] = tf.gradients (atom_ener, self.descrpt_reshape)
-        [net_hessian] = tf.hessian (atom_ener, self.descrpt_reshape)
+        [net_hessian] = tf.hessians (atom_ener, self.descrpt_reshape)
         print('net_hessian',net_hessian)
         net_deriv_reshape = tf.reshape (net_deriv, [-1, natoms[0] * self.ndescrpt])        
         force \

@@ -1147,12 +1147,12 @@ void compute_descriptor_se_a (vector<double > &			descrpt_a,
       descrpt_a_deriv[idx_deriv +10] = (2. * rr[2] * rr[1] * inr4	) * sw - descrpt_a[idx_value + 3] * dsw * rr[1] * inr;
       descrpt_a_deriv[idx_deriv +11] = (2. * rr[2] * rr[2] * inr4 - inr2) * sw - descrpt_a[idx_value + 3] * dsw * rr[2] * inr;
       // Hessian of component 1/r component 
-      double 1_r_diag = inr3 * sw -  dsw * inr2  ; 
+      double invr_diag = inr3 * sw -  dsw * inr2  ; 
       for (int ii = 0; ii < 3; ++ii){
         descrpt_a_Hessian[idx_Hessian + ii*3 + 0] = - 2 * descrpt_a_deriv[idx_deriv + ii] *  descrpt_a[idx_value + 0] - rr[ii] * rr[0] * inr3 * ( d2sw + sw * inr2 - inr * dsw );
         descrpt_a_Hessian[idx_Hessian + ii*3 + 1] = - 2 * descrpt_a_deriv[idx_deriv + ii] *  descrpt_a[idx_value + 1] - rr[ii] * rr[1] * inr3 * ( d2sw + sw * inr2 - inr * dsw );
         descrpt_a_Hessian[idx_Hessian + ii*3 + 2] = - 2 * descrpt_a_deriv[idx_deriv + ii] *  descrpt_a[idx_value + 2] - rr[ii] * rr[2] * inr3 * ( d2sw + sw * inr2 - inr * dsw );
-        descrpt_a_Hessian[idx_Hessian + ii*3 + ii] += 1_r_diag ;
+        descrpt_a_Hessian[idx_Hessian + ii*3 + ii] += invr_diag ;
       }
     
       // Hessian of component x/r2 y/r2 z/r2
