@@ -83,6 +83,10 @@ public:
     int nall = natoms(1);
     int ntypes = natoms_tensor.shape().dim_size(0) - 2;
     int nsamples = coord_tensor.shape().dim_size(0);
+    cout<<"natoms "<<natoms<<endl;
+    cout<<" @@@"<<endl;
+    cout<<"natoms_tensor.shape() "<<" "<<natoms_tensor.shape()<<" "<<endl;
+    cout<<"natoms[i] "<<natoms(0)<<" "<<natoms(1)<<" "<<natoms(2)<<" "<<natoms(3)<<" "<<natoms(4)<<endl;
 
     // check the sizes
     OP_REQUIRES (context, (nsamples == type_tensor.shape().dim_size(0)),	errors::InvalidArgument ("number of samples should match"));

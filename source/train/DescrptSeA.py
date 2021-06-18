@@ -238,8 +238,11 @@ class DescrptSeA ():
         print('net_hessian',net_hessian)
         print('self.ndescrpt',self.ndescrpt)
         print('natoms',natoms)
+        print('natoms[0]',natoms[0])
         print('tf.hessians (atom_ener, self.descrpt_reshape)',tf.hessians (atom_ener, self.descrpt_reshape))
+        print('net_deriv',net_deriv)
         net_deriv_reshape = tf.reshape (net_deriv, [-1, natoms[0] * self.ndescrpt])        
+        print('net_deriv_reshape',net_deriv_reshape)
         force \
             = op_module.prod_force_se_a (net_deriv_reshape,
                                           self.descrpt_deriv,
