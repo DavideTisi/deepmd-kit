@@ -151,7 +151,7 @@ class ProdHessianSeAOp : public OpKernel {
             int dR_dr_iter =  in_iter * i_idx * ndescrpt + aa_1 ;
             for (int zz = 0; zz < nnei; ++zz){
               int z_idx = nlist (nlist_iter + i_idx * nnei + zz);
-              if (j_idx < 0) continue;
+              if (z_idx < 0) continue;
               int aa_start_2, aa_end_2;
               make_descript_range_2 (aa_start_2, aa_end_2, zz );
               for (int aa_2 = aa_start_2 ; aa_2 < aa_end_2 ; ++aa_2 ) {
