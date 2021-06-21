@@ -273,6 +273,7 @@ class DescrptSeA ():
                                            natoms,
                                            n_a_sel = self.nnei_a,
                                            n_r_sel = self.nnei_r)
+            return force, virial, atom_virial,hessian, atom_hessian
 
         return force, virial, atom_virial
         

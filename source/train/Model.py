@@ -81,10 +81,12 @@ class Model() :
                .add('type_map',         list,   default = []) \
                .add('data_stat_nbatch', int,    default = 10) \
                .add('data_stat_protect',float,  default = 1e-2) \
+               .add('ifHessian',bool,  default = False) \
                .add('use_srtab',        str)
         class_data = args.parse(jdata)
         self.type_map = class_data['type_map']
         self.srtab_name = class_data['use_srtab']
+        self.ifHessian = class_data['ifHessian']
         self.data_stat_nbatch = class_data['data_stat_nbatch']
         self.data_stat_protect = class_data['data_stat_protect']
         if self.srtab_name is not None :
@@ -218,8 +220,12 @@ class Model() :
         energy_raw = tf.reshape(energy_raw, [-1, natoms[0]], name = 'o_atom_energy'+suffix)
         energy = tf.reduce_sum(global_cvt_2_ener_float(energy_raw), axis=1, name='o_energy'+suffix)
 
-        force, virial, atom_virial \
-            = self.descrpt.prod_force_virial (atom_ener, natoms)
+        if (self.ifHessian):
+            force, virial, atom_virial,hessian, atom_hessian \
+                    = self.descrpt.prod_force_virial (atom_ener, natoms)
+        else:
+            force, virial, atom_virial \
+                    = self.descrpt.prod_force_virial (atom_ener, natoms)
 
         if self.srtab is not None :
             sw_force \
@@ -249,6 +255,12 @@ class Model() :
         virial = tf.reshape (virial, [-1, 9], name = "o_virial"+suffix)
         atom_virial = tf.reshape (atom_virial, [-1, 9 * natoms[1]], name = "o_atom_virial"+suffix)
 
+        
+        if (self.ifHessian):
+            hessian = tf.reshape (hessian,[-1, 9 * natoms[1] * natoms[1] ],name = "o_hessian"+suffix)
+            atom_hessian = tf.reshape (atom_hessian,[-1, 9 * natoms[1] * natoms[1] * natoms[1] ],name = "o_atom_hessian"+suffix)
+
+
         model_dict = {}
         model_dict['energy'] = energy
         model_dict['force'] = force
@@ -257,6 +269,9 @@ class Model() :
         model_dict['atom_virial'] = atom_virial
         model_dict['coord'] = coord
         model_dict['atype'] = atype
+        if (self.ifHessian):
+           model_dict['hessian'] = hessian
+           model_dict['hessian_atom'] = atom_hessian
         model_dict['']
         
         return model_dict
