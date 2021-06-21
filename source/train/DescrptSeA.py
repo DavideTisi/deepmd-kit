@@ -21,6 +21,7 @@ class DescrptSeA ():
                .add('exclude_types', list, default = []) \
                .add('set_davg_zero', bool, default = False) \
                .add('activation_function', str,    default = 'tanh') \
+               .add('hessian', bool,    default = False ) \
                .add('precision', str, default = "default")
         class_data = args.parse(jdata)
         self.sel_a = class_data['sel']
@@ -31,6 +32,8 @@ class DescrptSeA ():
         self.filter_resnet_dt = class_data['resnet_dt']
         self.seed = class_data['seed']
         self.trainable = class_data['trainable']
+        self.ifHessian = class_data['hessian']
+        self.descrpt_Hessian = None
         self.filter_activation_fn = get_activation_func(class_data['activation_function'])
         self.filter_precision = get_precision(class_data['precision'])
         exclude_types = class_data['exclude_types']
@@ -188,23 +191,23 @@ class DescrptSeA ():
         coord = tf.reshape (coord_, [-1, natoms[1] * 3])
         box   = tf.reshape (box_, [-1, 9])
         atype = tf.reshape (atype_, [-1, natoms[1]])
-        #if (ifHessian):
-        #    self.descrpt, self.descrpt_deriv, self.descrpt_Hessian ,self.rij, self.nlist \
-        #        = op_module.descrpt_se_a (coord,
-        #                                atype,
-        #                                natoms,
-        #                                box,
-        #                                mesh,
-        #                                self.t_avg,
-        #                                self.t_std,
-        #                                rcut_a = self.rcut_a,
-        #                                rcut_r = self.rcut_r,
-        #                                rcut_r_smth = self.rcut_r_smth,
-        #                                sel_a = self.sel_a,
-        #                                sel_r = self.sel_r)
-        #else:
-        self.descrpt, self.descrpt_deriv, self.rij, self.nlist \
-            = op_module.descrpt_se_a (coord,
+        if (self.ifHessian):
+            self.descrpt, self.descrpt_deriv, self.descrpt_Hessian ,self.rij, self.nlist \
+                = op_module.descrpt_se_a_hessian (coord,
+                                        atype,
+                                        natoms,
+                                        box,
+                                        mesh,
+                                        self.t_avg,
+                                        self.t_std,
+                                        rcut_a = self.rcut_a,
+                                        rcut_r = self.rcut_r,
+                                        rcut_r_smth = self.rcut_r_smth,
+                                        sel_a = self.sel_a,
+                                        sel_r = self.sel_r)
+        else:
+            self.descrpt, self.descrpt_deriv, self.rij, self.nlist \
+                = op_module.descrpt_se_a (coord,
                                        atype,
                                        natoms,
                                        box,
@@ -259,7 +262,7 @@ class DescrptSeA ():
                                            natoms,
                                            n_a_sel = self.nnei_a,
                                            n_r_sel = self.nnei_r)
-        if (ifHessian):
+        if (self.ifHessian):
             hessian, atom_hessian \
                 = op_module.prod_hessian_se_a (net_deriv_reshape,
                                            self.descrpt_deriv,
@@ -294,7 +297,7 @@ class DescrptSeA ():
                 layer = tf.reshape(layer, [tf.shape(inputs)[0], natoms[2+type_i] * self.get_dim_out()])
                 qmat  = tf.reshape(qmat,  [tf.shape(inputs)[0], natoms[2+type_i] * self.get_dim_rot_mat_1() * 3])
                 output.append(layer)
-                output_qmat.append(qmat)
+                o:utput_qmat.append(qmat)
                 start_index += natoms[2+type_i]
         else :
             inputs_i = inputs

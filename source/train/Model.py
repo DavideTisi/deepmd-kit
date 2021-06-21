@@ -257,6 +257,7 @@ class Model() :
         model_dict['atom_virial'] = atom_virial
         model_dict['coord'] = coord
         model_dict['atype'] = atype
+        model_dict['']
         
         return model_dict
 
