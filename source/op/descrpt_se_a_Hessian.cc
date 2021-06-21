@@ -192,7 +192,7 @@ public:
       // set region
       boxtensor_t boxt [9] = {0};
       for (int dd = 0; dd < 9; ++dd) {
-	boxt[dd] = box(kk, dd);
+	      boxt[dd] = box(kk, dd);
       }
       SimulationRegion<compute_t > region;
       region.reinitBox (boxt);
@@ -200,18 +200,18 @@ public:
       // set & normalize coord
       vector<compute_t > d_coord3 (nall*3);
       for (int ii = 0; ii < nall; ++ii){
-	for (int dd = 0; dd < 3; ++dd){
-	  d_coord3[ii*3+dd] = coord(kk, ii*3+dd);
-	}
-	if (b_norm_atom){
-	  compute_t inter[3];
-	  region.phys2Inter (inter, &d_coord3[3*ii]);
-	  for (int dd = 0; dd < 3; ++dd){
-	    if      (inter[dd] < 0 ) inter[dd] += 1.;
-	    else if (inter[dd] >= 1) inter[dd] -= 1.;
-	  }
-	  region.inter2Phys (&d_coord3[3*ii], inter);
-	}
+	      for (int dd = 0; dd < 3; ++dd){
+	        d_coord3[ii*3+dd] = coord(kk, ii*3+dd);
+	      }
+	      if (b_norm_atom){
+	        compute_t inter[3];
+	        region.phys2Inter (inter, &d_coord3[3*ii]);
+	        for (int dd = 0; dd < 3; ++dd){
+	          if      (inter[dd] < 0 ) inter[dd] += 1.;
+	          else if (inter[dd] >= 1) inter[dd] -= 1.;
+	        }
+	        region.inter2Phys (&d_coord3[3*ii], inter);
+	      }
       }
 
       // set type
@@ -224,78 +224,78 @@ public:
       vector<int> nlist_map;
       bool b_nlist_map = false;
       if (nei_mode == 3) {	
-	int * pilist, *pjrange, *pjlist;
-	memcpy (&pilist, &mesh(4), sizeof(int *));
-	memcpy (&pjrange, &mesh(8), sizeof(int *));
-	memcpy (&pjlist, &mesh(12), sizeof(int *));
-	int inum = mesh(1);
-	assert (inum == nloc);
-	d_nlist_a.resize (inum);
-	d_nlist_r.resize (inum);
-	for (unsigned ii = 0; ii < inum; ++ii){
-	  d_nlist_r.reserve (pjrange[inum] / inum + 10);
-	}
-	for (unsigned ii = 0; ii < inum; ++ii){
-	  int i_idx = pilist[ii];
-	  for (unsigned jj = pjrange[ii]; jj < pjrange[ii+1]; ++jj){
-	    int j_idx = pjlist[jj];
-	    d_nlist_r[i_idx].push_back (j_idx);
-	  }
-	}
+	      int * pilist, *pjrange, *pjlist;
+	      memcpy (&pilist, &mesh(4), sizeof(int *));
+	      memcpy (&pjrange, &mesh(8), sizeof(int *));
+	      memcpy (&pjlist, &mesh(12), sizeof(int *));
+	      int inum = mesh(1);
+	      assert (inum == nloc);
+	      d_nlist_a.resize (inum);
+	      d_nlist_r.resize (inum);
+	      for (unsigned ii = 0; ii < inum; ++ii){
+	       d_nlist_r.reserve (pjrange[inum] / inum + 10);
+	      }
+	      for (unsigned ii = 0; ii < inum; ++ii){
+	        int i_idx = pilist[ii];
+	        for (unsigned jj = pjrange[ii]; jj < pjrange[ii+1]; ++jj){
+	          int j_idx = pjlist[jj];
+	          d_nlist_r[i_idx].push_back (j_idx);
+	        }
+	      }
       }
       else if (nei_mode == 2) {
-	vector<int > nat_stt = {mesh(1-1), mesh(2-1), mesh(3-1)};
-	vector<int > nat_end = {mesh(4-1), mesh(5-1), mesh(6-1)};
-	vector<int > ext_stt = {mesh(7-1), mesh(8-1), mesh(9-1)};
-	vector<int > ext_end = {mesh(10-1), mesh(11-1), mesh(12-1)};
-	vector<int > global_grid (3);
-	for (int dd = 0; dd < 3; ++dd) global_grid[dd] = nat_end[dd] - nat_stt[dd];
-	::build_nlist (d_nlist_a, d_nlist_r, d_coord3, nloc, rcut_a, rcut_r, nat_stt, nat_end, ext_stt, ext_end, region, global_grid);
+      	vector<int > nat_stt = {mesh(1-1), mesh(2-1), mesh(3-1)};
+	      vector<int > nat_end = {mesh(4-1), mesh(5-1), mesh(6-1)};
+	      vector<int > ext_stt = {mesh(7-1), mesh(8-1), mesh(9-1)};
+	      vector<int > ext_end = {mesh(10-1), mesh(11-1), mesh(12-1)};
+	      vector<int > global_grid (3);
+	      for (int dd = 0; dd < 3; ++dd) global_grid[dd] = nat_end[dd] - nat_stt[dd];
+	      ::build_nlist (d_nlist_a, d_nlist_r, d_coord3, nloc, rcut_a, rcut_r, nat_stt, nat_end, ext_stt, ext_end, region, global_grid);
       }
       else if (nei_mode == 1) {
-	vector<double > bk_d_coord3 = d_coord3;
-	vector<int > bk_d_type = d_type;
-	vector<int > ncell, ngcell;
-	copy_coord(d_coord3, d_type, nlist_map, ncell, ngcell, bk_d_coord3, bk_d_type, rcut_r, region);	
-	b_nlist_map = true;
-	vector<int> nat_stt(3, 0);
-	vector<int> ext_stt(3), ext_end(3);
-	for (int dd = 0; dd < 3; ++dd){
-	  ext_stt[dd] = -ngcell[dd];
-	  ext_end[dd] = ncell[dd] + ngcell[dd];
-	}
-	::build_nlist (d_nlist_a, d_nlist_r, d_coord3, nloc, rcut_a, rcut_r, nat_stt, ncell, ext_stt, ext_end, region, ncell);
+	      vector<double > bk_d_coord3 = d_coord3;
+	      vector<int > bk_d_type = d_type;
+	      vector<int > ncell, ngcell;
+	      copy_coord(d_coord3, d_type, nlist_map, ncell, ngcell, bk_d_coord3, bk_d_type, rcut_r, region);	
+	      b_nlist_map = true;
+	      vector<int> nat_stt(3, 0);
+	      vector<int> ext_stt(3), ext_end(3);
+	      for (int dd = 0; dd < 3; ++dd){
+	        ext_stt[dd] = -ngcell[dd];
+	        ext_end[dd] = ncell[dd] + ngcell[dd];
+	      }
+	      ::build_nlist (d_nlist_a, d_nlist_r, d_coord3, nloc, rcut_a, rcut_r, nat_stt, ncell, ext_stt, ext_end, region, ncell);
       }
       else if (nei_mode == -1){
-	::build_nlist (d_nlist_a, d_nlist_r, d_coord3, rcut_a, rcut_r, NULL);
+	      ::build_nlist (d_nlist_a, d_nlist_r, d_coord3, rcut_a, rcut_r, NULL);
       }
       else {
-	throw runtime_error("unknow neighbor mode");
+	      throw runtime_error("unknow neighbor mode");
       }
 
       // loop over atoms, compute descriptors for each atom
 #pragma omp parallel for 
       for (int ii = 0; ii < nloc; ++ii){
-	vector<int> fmt_nlist_a;
-	vector<int> fmt_nlist_r;
-	int ret = -1;
-	if (fill_nei_a){
-	  if ((ret = format_nlist_fill_a (fmt_nlist_a, fmt_nlist_r, d_coord3, ntypes, d_type, region, b_pbc, ii, d_nlist_a[ii], d_nlist_r[ii], rcut_r, sec_a, sec_r)) != -1){
-	    if (count_nei_idx_overflow == 0) {
-	      cout << "WARNING: Radial neighbor list length of type " << ret << " is not enough" << endl;
-	      flush(cout);
-	      count_nei_idx_overflow ++;
-	    }
-	  }
-	}
+	      vector<int> fmt_nlist_a;
+	      vector<int> fmt_nlist_r;
+	      int ret = -1;
+	      if (fill_nei_a){
+	        if ((ret = format_nlist_fill_a (fmt_nlist_a, fmt_nlist_r, d_coord3, ntypes, d_type, region, b_pbc, ii, d_nlist_a[ii], d_nlist_r[ii], rcut_r, sec_a, sec_r)) != -1){
+	          if (count_nei_idx_overflow == 0) {
+	            cout << "WARNING: Radial neighbor list length of type " << ret << " is not enough" << endl;
+	            flush(cout);
+	            count_nei_idx_overflow ++;
+	          }
+	        }
+	      }
 
-	vector<compute_t > d_descrpt_a;
-	vector<compute_t > d_descrpt_a_deriv;
-  vector<compute_t > d_descrpt_a_Hessian;
-	vector<compute_t > d_descrpt_r;
-	vector<compute_t > d_descrpt_r_deriv;
-	vector<compute_t > d_rij_a;
-	vector<compute_t > d_rij_r;      
+	    vector<compute_t > d_descrpt_a;
+	    vector<compute_t > d_descrpt_a_deriv;
+      vector<compute_t > d_descrpt_a_Hessian;
+	    vector<compute_t > d_descrpt_r;
+	    vector<compute_t > d_descrpt_r_deriv;
+	    vector<compute_t > d_rij_a;
+	    vector<compute_t > d_rij_r;      
 	compute_descriptor_se_a (d_descrpt_a,
 				 d_descrpt_a_deriv,
          d_descrpt_a_Hessian,
