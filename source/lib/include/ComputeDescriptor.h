@@ -1079,6 +1079,7 @@ void compute_descriptor_se_a (vector<double > &			descrpt_a,
 			       const double &				rmin, 
 			       const double &				rmax)
 {  
+  std::cout << "entro in compute_descriptor_se_a per il calcolo dell'hessiano" << std::endl ; 
   // compute the diff of the neighbors
   vector<vector<double > > sel_a_diff (sec_a.back());
   rij_a.resize (sec_a.back() * 3);

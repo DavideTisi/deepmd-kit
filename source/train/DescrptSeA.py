@@ -191,8 +191,8 @@ class DescrptSeA ():
         coord = tf.reshape (coord_, [-1, natoms[1] * 3])
         box   = tf.reshape (box_, [-1, 9])
         atype = tf.reshape (atype_, [-1, natoms[1]])
-        if (self.ifHessian):
-            self.descrpt, self.descrpt_deriv, self.descrpt_Hessian ,self.rij, self.nlist \
+        #if (self.ifHessian):
+        self.descrpt, self.descrpt_deriv, self.descrpt_Hessian ,self.rij, self.nlist \
                 = op_module.descrpt_se_a_hessian (coord,
                                         atype,
                                         natoms,
@@ -205,20 +205,20 @@ class DescrptSeA ():
                                         rcut_r_smth = self.rcut_r_smth,
                                         sel_a = self.sel_a,
                                         sel_r = self.sel_r)
-        else:
-            self.descrpt, self.descrpt_deriv, self.rij, self.nlist \
-                = op_module.descrpt_se_a (coord,
-                                       atype,
-                                       natoms,
-                                       box,
-                                       mesh,
-                                       self.t_avg,
-                                       self.t_std,
-                                       rcut_a = self.rcut_a,
-                                       rcut_r = self.rcut_r,
-                                       rcut_r_smth = self.rcut_r_smth,
-                                       sel_a = self.sel_a,
-                                       sel_r = self.sel_r)
+        #else:
+        #    self.descrpt, self.descrpt_deriv, self.rij, self.nlist \
+        #        = op_module.descrpt_se_a (coord,
+        #                               atype,
+        #                               natoms,
+        #                               box,
+        #                               mesh,
+        #                               self.t_avg,
+        #                               self.t_std,
+        #                               rcut_a = self.rcut_a,
+        #                               rcut_r = self.rcut_r,
+        #                               rcut_r_smth = self.rcut_r_smth,
+        #                               sel_a = self.sel_a,
+        #                               sel_r = self.sel_r)
 
         self.descrpt_reshape = tf.reshape(self.descrpt, [-1, self.ndescrpt])
         self.descrpt_reshape = tf.identity(self.descrpt_reshape, name = 'o_rmat')
@@ -262,8 +262,8 @@ class DescrptSeA ():
                                            natoms,
                                            n_a_sel = self.nnei_a,
                                            n_r_sel = self.nnei_r)
-        if (self.ifHessian):
-            hessian, atom_hessian \
+        #if (self.ifHessian):
+        hessian, atom_hessian \
                 = op_module.prod_hessian_se_a (net_deriv_reshape,
                                            self.descrpt_deriv,
                                            net_hessian_reshape,
@@ -273,9 +273,9 @@ class DescrptSeA ():
                                            natoms,
                                            n_a_sel = self.nnei_a,
                                            n_r_sel = self.nnei_r)
-            return force, virial, atom_virial,hessian, atom_hessian
+        return force, virial, atom_virial,hessian, atom_hessian
 
-        return force, virial, atom_virial
+        #return force, virial, atom_virial
         
 
     def _pass_filter(self, 
