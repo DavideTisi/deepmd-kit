@@ -74,7 +74,7 @@ class DescrptSeA ():
             self.place_holders['type'] = tf.placeholder(tf.int32, [None, None], name=name_pfx+'t_type')
             self.place_holders['natoms_vec'] = tf.placeholder(tf.int32, [self.ntypes+2], name=name_pfx+'t_natoms')
             self.place_holders['default_mesh'] = tf.placeholder(tf.int32, [None], name=name_pfx+'t_mesh')
-            self.stat_descrpt, descrpt_deriv, rij, nlist \
+            self.stat_descrpt, descrpt_deriv, self.descrpt_hessian, rij, nlist \
                 = op_module.descrpt_se_a(self.place_holders['coord'],
                                          self.place_holders['type'],
                                          self.place_holders['natoms_vec'],
@@ -192,8 +192,10 @@ class DescrptSeA ():
         box   = tf.reshape (box_, [-1, 9])
         atype = tf.reshape (atype_, [-1, natoms[1]])
         #if (self.ifHessian):
-        self.descrpt, self.descrpt_deriv, self.descrpt_Hessian ,self.rij, self.nlist \
-                = op_module.descrpt_se_a_hessian (coord,
+        #self.descrpt, self.descrpt_deriv, self.descrpt_Hessian ,self.rij, self.nlist \
+        #        = op_module.descrpt_se_a_hessian (coord,
+        self.descrpt, self.descrpt_deriv, self.descrpt_hessian ,self.rij, self.nlist \
+                = op_module.descrpt_se_a (coord,
                                         atype,
                                         natoms,
                                         box,
@@ -222,7 +224,9 @@ class DescrptSeA ():
 
         self.descrpt_reshape = tf.reshape(self.descrpt, [-1, self.ndescrpt])
         self.descrpt_reshape = tf.identity(self.descrpt_reshape, name = 'o_rmat')
+        print('self.descrpt_reshape',self.descrpt_reshape)
         self.descrpt_deriv = tf.identity(self.descrpt_deriv, name = 'o_rmat_deriv')
+        self.descrpt_hessian = tf.identity(self.descrpt_hessian, name = 'o_rmat_hessian')
         self.rij = tf.identity(self.rij, name = 'o_rij')
         self.nlist = tf.identity(self.nlist, name = 'o_nlist')
 
@@ -267,7 +271,7 @@ class DescrptSeA ():
                 = op_module.prod_hessian_se_a (net_deriv_reshape,
                                            self.descrpt_deriv,
                                            net_hessian_reshape,
-                                           self.in_Hessian,
+                                           self.descrpt_hessian,
                                            self.rij,
                                            self.nlist,
                                            natoms,
@@ -298,7 +302,7 @@ class DescrptSeA ():
                 layer = tf.reshape(layer, [tf.shape(inputs)[0], natoms[2+type_i] * self.get_dim_out()])
                 qmat  = tf.reshape(qmat,  [tf.shape(inputs)[0], natoms[2+type_i] * self.get_dim_rot_mat_1() * 3])
                 output.append(layer)
-                o:utput_qmat.append(qmat)
+                output_qmat.append(qmat)
                 start_index += natoms[2+type_i]
         else :
             inputs_i = inputs
@@ -309,7 +313,9 @@ class DescrptSeA ():
             qmat  = tf.reshape(qmat,  [tf.shape(inputs)[0], natoms[0] * self.get_dim_rot_mat_1() * 3])
             output.append(layer)
             output_qmat.append(qmat)
+        print('output',output)
         output = tf.concat(output, axis = 1)
+        print('output_qmat',output_qmat)
         output_qmat = tf.concat(output_qmat, axis = 1)
         return output, output_qmat
 

@@ -991,6 +991,7 @@ void compute_descriptor_se_a (vector<double > &			descrpt_a,
 			       const double &				rmax)
 {  
   // compute the diff of the neighbors
+  std::cout << "compute_descriptor_se_a senza hessiano" << std::endl ; 
   vector<vector<double > > sel_a_diff (sec_a.back());
   rij_a.resize (sec_a.back() * 3);
   fill (rij_a.begin(), rij_a.end(), 0.0);
