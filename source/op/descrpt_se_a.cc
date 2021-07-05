@@ -31,7 +31,7 @@ REGISTER_OP("DescrptSeA")
     .Attr("sel_r: list(int)")   //all zero
     .Output("descrpt: T")
     .Output("descrpt_deriv: T")
-    .Output("descrpt_Hessian: T")
+    .Output("descrpt_hessian: T")
     .Output("rij: T")
     .Output("nlist: int32");
 
@@ -175,7 +175,7 @@ public:
     auto std	= std_tensor	.matrix<FPTYPE>();
     auto descrpt	= descrpt_tensor	->matrix<FPTYPE>();
     auto descrpt_deriv	= descrpt_deriv_tensor	->matrix<FPTYPE>();
-    auto descrpt_Hessian	= descrpt_deriv_Hessian	->matrix<FPTYPE>();
+    auto descrpt_hessian	= descrpt_Hessian_tensor	->matrix<FPTYPE>();
     auto rij		= rij_tensor		->matrix<FPTYPE>();
     auto nlist		= nlist_tensor		->matrix<int>();
 
@@ -325,7 +325,7 @@ public:
 	  descrpt_deriv(kk, ii * ndescrpt * 3 + jj) = d_descrpt_a_deriv[jj] / std(d_type[ii], jj/3);
 	}
   for (int jj = 0; jj < ndescrpt_a * 3 *3; ++jj) {
-	  descrpt_Hessian(kk, ii * ndescrpt * 3 + jj) = d_descrpt_a_Hessian[jj] / std(d_type[ii], jj/3);
+	  descrpt_hessian(kk, ii * ndescrpt * 3 + jj) = d_descrpt_a_Hessian[jj] / std(d_type[ii], jj/3);
 	}
 	for (int jj = 0; jj < nnei_a * 3; ++jj){
 	  rij (kk, ii * nnei * 3 + jj) = d_rij_a[jj];
