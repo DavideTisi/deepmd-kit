@@ -16,8 +16,8 @@ REGISTER_OP("ProdHessianSeA")
 .Input("natoms: int32")
 .Attr("n_a_sel: int")
 .Attr("n_r_sel: int")
-.Output("Hessian: T")
-.Output("atom_Hessian: T");
+.Output("hessian: T")
+.Output("atom_hessian: T");
 
 
 using namespace tensorflow;

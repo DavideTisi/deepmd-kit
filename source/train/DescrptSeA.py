@@ -316,7 +316,7 @@ class DescrptSeA ():
         print('output',output)
         output = tf.concat(output, axis = 1)
         print('output_qmat',output_qmat)
-        output_qmat = tf.concat(output_qmat, axis = 1)
+#        output_qmat = tf.concat(output_qmat, axis = 1)
         return output, output_qmat
 
 
