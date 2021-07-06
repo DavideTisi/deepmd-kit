@@ -11,6 +11,7 @@ import deepmd._prod_force_grad
 import deepmd._prod_virial_grad
 import deepmd._prod_force_se_a_grad
 import deepmd._prod_virial_se_a_grad
+import deepmd._prod_hessian_se_a_grad
 import deepmd._prod_force_se_r_grad
 import deepmd._prod_virial_se_r_grad
 import deepmd._soft_min_force_grad
@@ -18,7 +19,7 @@ import deepmd._soft_min_virial_grad
 
 def _make_node_names(model_type, modifier_type = None) :
     if model_type == 'ener':
-        nodes = "o_energy,o_force,o_virial,o_atom_energy,o_atom_virial,descrpt_attr/rcut,descrpt_attr/ntypes,fitting_attr/dfparam,fitting_attr/daparam,model_attr/tmap,model_attr/model_type"
+        nodes = "o_energy,o_force,o_virial,o_atom_energy,o_atom_virial,o_hessian,o_atom_hessian,descrpt_attr/rcut,descrpt_attr/ntypes,fitting_attr/dfparam,fitting_attr/daparam,model_attr/tmap,model_attr/model_type"
     elif model_type == 'wfc':
         nodes = "o_wfc,descrpt_attr/rcut,descrpt_attr/ntypes,model_attr/tmap,model_attr/sel_type,model_attr/model_type"
     elif model_type == 'dipole':

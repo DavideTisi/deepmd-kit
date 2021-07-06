@@ -30,8 +30,10 @@ class DeepPot (DeepEval) :
         self.t_energy = self.graph.get_tensor_by_name ('load/o_energy:0')
         self.t_force  = self.graph.get_tensor_by_name ('load/o_force:0')
         self.t_virial = self.graph.get_tensor_by_name ('load/o_virial:0')
+        self.t_hessian = self.graph.get_tensor_by_name ('load/o_hessian:0')
         self.t_ae     = self.graph.get_tensor_by_name ('load/o_atom_energy:0')
         self.t_av     = self.graph.get_tensor_by_name ('load/o_atom_virial:0')
+        self.t_ah     = self.graph.get_tensor_by_name ('load/o_atom_hessian:0')
         self.t_fparam = None
         self.t_aparam = None
         # check if the graph has fparam
@@ -89,19 +91,27 @@ class DeepPot (DeepEval) :
              atom_types,
              fparam = None,
              aparam = None,
-             atomic = False) :
+             atomic = False,
+             hessian = False) :
+
         if atomic :
             if self.modifier_type is not None:
                 raise RuntimeError('modifier does not support atomic modification')
-            return self.eval_inner(coords, cells, atom_types, fparam = fparam, aparam = aparam, atomic = atomic)
+            if (hessian):
+                return self.eval_inner(coords, cells, atom_types, fparam = fparam, aparam = aparam, atomic = atomic, ifhessian=hessian)
+            else:
+                return self.eval_inner(coords, cells, atom_types, fparam = fparam, aparam = aparam, atomic = atomic)
         else :
-            e, f, v = self.eval_inner(coords, cells, atom_types, fparam = fparam, aparam = aparam, atomic = atomic)
-            if self.modifier_type is not None:
-                me, mf, mv = self.dm.eval(coords, cells, atom_types)
-                e += me.reshape(e.shape)
-                f += mf.reshape(f.shape)
-                v += mv.reshape(v.shape)
-            return e, f, v
+            if(hessian):
+                return self.eval_inner(coords, cells, atom_types, fparam = fparam, aparam = aparam, atomic = atomic, ifhessian=hessian)
+            else:
+                e, f, v = self.eval_inner(coords, cells, atom_types, fparam = fparam, aparam = aparam, atomic = atomic)
+                if self.modifier_type is not None:
+                    me, mf, mv = self.dm.eval(coords, cells, atom_types)
+                    e += me.reshape(e.shape)
+                    f += mf.reshape(f.shape)
+                    v += mv.reshape(v.shape)
+                return e, f, v
 
     def eval_inner(self,
              coords, 
@@ -109,7 +119,8 @@ class DeepPot (DeepEval) :
              atom_types, 
              fparam = None, 
              aparam = None, 
-             atomic = False) :
+             atomic = False,
+             ifhessian = False) :
         # standarize the shape of inputs
         atom_types = np.array(atom_types, dtype = int).reshape([-1])
         natoms = atom_types.size
@@ -163,6 +174,8 @@ class DeepPot (DeepEval) :
         virial = []
         ae = []
         av = []
+        hessian = []
+        ah = []
         feed_dict_test = {}
         feed_dict_test[self.t_natoms] = natoms_vec
         feed_dict_test[self.t_type  ] = atom_types
@@ -172,6 +185,10 @@ class DeepPot (DeepEval) :
         if atomic :
             t_out += [self.t_ae, 
                       self.t_av]
+        if ifhessian : 
+            t_out += [self.t_hessian]
+            if atomic : 
+                t_out += [self.t_ah]
         for ii in range(nframes) :
             feed_dict_test[self.t_coord] = np.reshape(coords[ii:ii+1, :], [-1])
             feed_dict_test[self.t_box  ] = np.reshape(cells [ii:ii+1, :], [-1])
@@ -190,6 +207,13 @@ class DeepPot (DeepEval) :
             if atomic:
                 ae.append(v_out[3])
                 av.append(v_out[4])
+            if ifhessian : 
+                if atomic : 
+                    hessian.append(v_out[5])
+                    ah.append(v_out[6])
+                else:
+                    hessian.append(v_out[3])
+
 
         # reverse map of the outputs
         force  = self.reverse_map(np.reshape(force, [nframes,-1,3]), imap)
@@ -200,11 +224,23 @@ class DeepPot (DeepEval) :
         energy = np.reshape(energy, [nframes, 1])
         force = np.reshape(force, [nframes, natoms, 3])
         virial = np.reshape(virial, [nframes, 9])
-        if atomic:
-            ae = np.reshape(ae, [nframes, natoms, 1])
-            av = np.reshape(av, [nframes, natoms, 9])
-            return energy, force, virial, ae, av
-        else :
-            return energy, force, virial
+        if ifhessian : 
+            hessian = self.reverse_map(np.reshape(hessian , [nframes,-1,3,3]), imap)
+            hessian = np.reshape(hessian, [nframes, natoms*natoms, 9])
+            if atomic:
+                ah = self.reverse_map(np.reshape(ah , [nframes,-1,3,3]), imap)
+                ah = np.reshape(hessian, [nframes, natoms*natoms*natoms, 9])
+                ae = np.reshape(ae, [nframes, natoms, 1])
+                av = np.reshape(av, [nframes, natoms, 9])
+                return energy, force, virial,hessian, ae, av, ah
+            else:
+                return energy, force, virial,hessian
+        else:
+            if atomic:
+                ae = np.reshape(ae, [nframes, natoms, 1])
+                av = np.reshape(av, [nframes, natoms, 9])
+                return energy, force, virial, ae, av
+            else :
+                return energy, force, virial
 
 

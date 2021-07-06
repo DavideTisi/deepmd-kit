@@ -10,8 +10,8 @@ REGISTER_OP("ProdHessianSeA")
 .Attr("T: {float, double}")
 .Input("net_deriv: T")
 .Input("in_deriv: T")
-.Input("net_Hessian: T")
-.Input("in_Hessian: T")
+.Input("net_hessian: T")
+.Input("in_hessian: T")
 .Input("nlist: int32")
 .Input("natoms: int32")
 .Attr("n_a_sel: int")
@@ -81,7 +81,7 @@ class ProdHessianSeAOp : public OpKernel {
     atom_hessian_shape.AddDim (nframes);
     atom_hessian_shape.AddDim (nall * nall*nall * 9 );
     Tensor* atom_hessian_tensor = NULL;
-    int context_output_index = 0;
+    context_output_index = 0;
     OP_REQUIRES_OK(context, context->allocate_output(context_output_index++,
 						     atom_hessian_shape, &atom_hessian_tensor));
   //  // Create an output tensor
@@ -145,6 +145,7 @@ class ProdHessianSeAOp : public OpKernel {
           int j_idx = nlist (nlist_iter + i_idx * nnei + jj);
           if (j_idx < 0) continue;
           int aa_start_1, aa_end_1;
+	  // TODO the use of make_descript_range_2 and aa_1/aa_2 might be wrong  
           make_descript_range_1 (aa_start_1, aa_end_1, jj);
           for (int aa_1 = aa_start_1; aa_1 < aa_end_1; ++aa_1) {
             FPTYPE de_dR1 =  net_deriv (net_iter + i_idx * ndescrpt + aa_1 ) ;
@@ -178,6 +179,33 @@ private:
   int n_r_sel, n_a_sel, n_a_shift;
   inline void
   make_descript_range (int & idx_start,
+		       int & idx_end,
+		       const int & nei_idx) {
+    if (nei_idx < n_a_sel) {
+      idx_start = nei_idx * 4;
+      idx_end   = nei_idx * 4 + 4;
+    }
+    else {
+      idx_start = n_a_shift + (nei_idx - n_a_sel);
+      idx_end   = n_a_shift + (nei_idx - n_a_sel) + 1;
+    }
+  }
+  inline void
+  make_descript_range_1 (int & idx_start,
+		       int & idx_end,
+		       const int & nei_idx) {
+    if (nei_idx < n_a_sel) {
+      idx_start = nei_idx * 4;
+      idx_end   = nei_idx * 4 + 4;
+    }
+    else {
+      idx_start = n_a_shift + (nei_idx - n_a_sel);
+      idx_end   = n_a_shift + (nei_idx - n_a_sel) + 1;
+    }
+  }
+
+  inline void
+  make_descript_range_2 (int & idx_start,
 		       int & idx_end,
 		       const int & nei_idx) {
     if (nei_idx < n_a_sel) {

@@ -272,7 +272,6 @@ class DescrptSeA ():
                                            self.descrpt_deriv,
                                            net_hessian_reshape,
                                            self.descrpt_hessian,
-                                           self.rij,
                                            self.nlist,
                                            natoms,
                                            n_a_sel = self.nnei_a,
@@ -316,7 +315,7 @@ class DescrptSeA ():
         print('output',output)
         output = tf.concat(output, axis = 1)
         print('output_qmat',output_qmat)
-#        output_qmat = tf.concat(output_qmat, axis = 1)
+        output_qmat = tf.concat(output_qmat, axis = 1)
         return output, output_qmat
 
 
