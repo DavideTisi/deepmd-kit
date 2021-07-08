@@ -131,11 +131,12 @@ class ProdHessianSeAOp : public OpKernel {
       int in_iter	= kk * nloc * ndescrpt * 3;
       int nlist_iter	= kk * nloc * nnei;
 
+// TODO put the initialization in the main loop
       for (int ii = 0 ; ii < nall*nall*9 ; ++ii){
         int i_idx = ii ;
         hessian(hessian_iter + i_idx ) = 0. ;
         for (int jj = 0 ; jj<nall ; ++jj ){
-          atom_hessian(hessian_iter + i_idx + jj ) = 0. ;
+          atom_hessian(atom_hessian_iter + i_idx + jj ) = 0. ;
         }
       }
 
@@ -148,22 +149,24 @@ class ProdHessianSeAOp : public OpKernel {
 	  // TODO the use of make_descript_range_2 and aa_1/aa_2 might be wrong  
           make_descript_range_1 (aa_start_1, aa_end_1, jj);
           for (int aa_1 = aa_start_1; aa_1 < aa_end_1; ++aa_1) {
-            FPTYPE de_dR1 =  net_deriv (net_iter + i_idx * ndescrpt + aa_1 ) ;
-            int dR_dr_iter =  in_iter * i_idx * ndescrpt + aa_1 ;
-            for (int zz = 0; zz < nnei; ++zz){
-              int z_idx = nlist (nlist_iter + i_idx * nnei + zz);
+            //FPTYPE de_dR1 =  net_deriv (net_iter + i_idx * ndescrpt + aa_1 ) ;
+            //int dR_dr_iter =  in_iter * i_idx * ndescrpt + aa_1 ;
+            for (int kk = 0; kk < nnei; ++kk){
+              int z_idx = nlist (nlist_iter + i_idx * nnei + kk);
               if (z_idx < 0) continue;
               int aa_start_2, aa_end_2;
-              make_descript_range_2 (aa_start_2, aa_end_2, zz );
+              make_descript_range_2 (aa_start_2, aa_end_2, kk );
               for (int aa_2 = aa_start_2 ; aa_2 < aa_end_2 ; ++aa_2 ) {
-                FPTYPE de_dR2 =  net_deriv (net_iter + i_idx * ndescrpt + aa_2 ) ;
-                int dR_dr_iter2 =  in_iter * i_idx * ndescrpt + aa_2 ;
+                //FPTYPE de_dR2 =  net_deriv (net_iter + i_idx * ndescrpt + aa_2 ) ;
+                //int dR_dr_iter2 =  in_iter * i_idx * ndescrpt + aa_2 ;
                 for (int dd0 = 0; dd0 < 3; ++dd0){
                   for (int dd1 = 0; dd1 < 3; ++dd1){
                     // compute d^2e_k/(dR_k)^2 * dR_k/dr_n dR_k/dr_m
-                    atom_hessian(hessian_iter + i_idx + jj ) += net_hessian(net_hessian_iter+ i_idx * ndescrpt * ndescrpt + aa_1 * ndescrpt +aa_2  )*in_deriv (in_iter + i_idx * ndescrpt * 3 + aa_1 * 3 + dd0) * in_deriv (in_iter + i_idx * ndescrpt * 3 + aa_2 * 3 + dd1);
+                    FPTYPE tmp1 = net_hessian(net_hessian_iter+ i_idx * ndescrpt * ndescrpt + aa_1 * ndescrpt +aa_2  )*in_deriv (in_iter + i_idx * ndescrpt * 3 + aa_1 * 3 + dd0) * in_deriv (in_iter + i_idx * ndescrpt * 3 + aa_2 * 3 + dd1);
                     // compute de_k/dR_k * d^2R_k/(dr_n dr_m) 
-                    atom_hessian(hessian_iter + i_idx + jj ) += net_deriv (net_iter + i_idx * ndescrpt + aa_1) *  in_hessian (in_hessian_iter + i_idx * nloc * ndescrpt+j_idx * ndescrpt + aa_1 ) ; 
+                    FPTYPE tmp2 = net_deriv (net_iter + i_idx * ndescrpt + aa_1) *  in_hessian (in_hessian_iter + i_idx * nloc * ndescrpt+j_idx * ndescrpt + aa_1 );
+                    atom_hessian(atomic_hessian_iter + i_idx * nnei * nnei * 9 + jj * nnei * 9 + kk * 9 + dd0 * 3 + dd1) += tmp1 + tmp2 ;
+                    hessian (hessian_iter + jj * nnei * 9 + kk * 9 + dd0 * 3 + dd1) += tmp1 + tmp2  ;  
                   }
                 }
               }
