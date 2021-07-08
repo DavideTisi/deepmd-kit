@@ -164,7 +164,8 @@ class ProdHessianSeAOp : public OpKernel {
                     // compute d^2e_k/(dR_k)^2 * dR_k/dr_n dR_k/dr_m
                     FPTYPE tmp1 = net_hessian(net_hessian_iter+ i_idx * ndescrpt * ndescrpt + aa_1 * ndescrpt +aa_2  )*in_deriv (in_iter + i_idx * ndescrpt * 3 + aa_1 * 3 + dd0) * in_deriv (in_iter + i_idx * ndescrpt * 3 + aa_2 * 3 + dd1);
                     // compute de_k/dR_k * d^2R_k/(dr_n dr_m) 
-                    FPTYPE tmp2 = net_deriv (net_iter + i_idx * ndescrpt + aa_1) *  in_hessian (in_hessian_iter + i_idx * nloc * ndescrpt+j_idx * ndescrpt + aa_1 );
+                    FPTYPE tmp2 = net_deriv (net_iter + i_idx * ndescrpt + aa_1) *  in_hessian (in_hessian_iter + i_idx * nloc * ndescrpt * 9 +j_idx * ndescrpt *9 + aa_1 * 9 + dd0 *3 +dd1 );
+                    // now add to the matrices
                     atom_hessian(atomic_hessian_iter + i_idx * nnei * nnei * 9 + jj * nnei * 9 + kk * 9 + dd0 * 3 + dd1) += tmp1 + tmp2 ;
                     hessian (hessian_iter + jj * nnei * 9 + kk * 9 + dd0 * 3 + dd1) += tmp1 + tmp2  ;  
                   }
